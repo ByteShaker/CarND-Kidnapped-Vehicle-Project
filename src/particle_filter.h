@@ -11,6 +11,8 @@
 
 #include "helper_functions.h"
 
+using namespace std;
+
 struct Particle {
 
 	int id;
@@ -26,8 +28,7 @@ class ParticleFilter {
 	
 	// Number of particles to draw
 	int num_particles; 
-	
-	
+
 	
 	// Flag, if filter is initialized
 	bool is_initialized;
