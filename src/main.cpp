@@ -121,10 +121,10 @@ int main() {
 		int num_particles = particles.size();
 		double highest_weight = 0.0;
 		Particle best_particle;
-		for (int i = 0; i < num_particles; ++i) {
-			if (particles[i].weight > highest_weight) {
-				highest_weight = particles[i].weight;
-				best_particle = particles[i];
+		for (int ii = 0; ii < num_particles; ++ii) {
+			if (particles[ii].weight > highest_weight) {
+				highest_weight = particles[ii].weight;
+				best_particle = particles[ii];
 			}
 		}
 		double *avg_error = getError(gt[i].x, gt[i].y, gt[i].theta, best_particle.x, best_particle.y, best_particle.theta);

@@ -17,7 +17,9 @@
 using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
-    num_particles = 100;
+    //Initialize set of particles to first GPS position
+    //Add Gaussian Noise
+    num_particles = 200;
     for(int i=0; i< num_particles; i++){
         random_device rd;
         default_random_engine gen(rd());
@@ -36,18 +38,21 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     }
     is_initialized = true;
 
-	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
-	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
-	// Add random Gaussian noise to each particle.
-	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
+    //Move each step by control parameters.
+    //Add Gaussian Noise
     for(int i=0; i< num_particles; i++){
-        particles[i].x = particles[i].x + (velocity/yaw_rate)*(sin(particles[i].theta + (yaw_rate * delta_t)) - sin(particles[i].theta));
-        particles[i].y = particles[i].y + (velocity/yaw_rate)*(cos(particles[i].theta) - cos(particles[i].theta + (yaw_rate * delta_t)));
-        particles[i].theta = particles[i].theta + (yaw_rate * delta_t);
+        if(yaw_rate == 0){
+            particles[i].x = particles[i].x + (velocity * delta_t) * cos(particles[i].theta);
+            particles[i].y = particles[i].y + (velocity * delta_t) * sin(particles[i].theta);
+        }else{
+            particles[i].x = particles[i].x + (velocity/yaw_rate)*(sin(particles[i].theta + (yaw_rate * delta_t)) - sin(particles[i].theta));
+            particles[i].y = particles[i].y + (velocity/yaw_rate)*(cos(particles[i].theta) - cos(particles[i].theta + (yaw_rate * delta_t)));
+            particles[i].theta = particles[i].theta + (yaw_rate * delta_t);
+        }
+
 
         random_device rd;
         default_random_engine gen(rd());
@@ -58,16 +63,14 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
         particles[i].x = pos_error_x(gen);
         particles[i].y = pos_error_y(gen);
         particles[i].theta = pos_error_theta(gen);
-        //cout << particles[i].x << endl;
     }
-	// TODO: Add measurements to each particle and add random Gaussian noise.
-	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
 
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
+    //Perform nearest neighbour for every observed measurement
     for(int obs=0; obs<observations.size(); obs++){
         double obs_x = observations[obs].x;
         double obs_y = observations[obs].y;
@@ -88,14 +91,10 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
             }
         }
     }
-	// TODO: Find the predicted measurement that is closest to each observed measurement and assign the 
-	//   observed measurement to this particular landmark.
-	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
-	//   implement this method and use it as a helper during the updateWeights phase.
-
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], std::vector<LandmarkObs> observations, Map map_landmarks) {
+    //Update weight for each particle using multi-variate-normal
     for(int i=0; i<num_particles; i++){
         double current_x = particles[i].x;
         double current_y = particles[i].y;
@@ -134,40 +133,28 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], s
             double denominator = sqrt(2.0 * M_PI * std_landmark[0] * std_landmark[1]);
             new_weight = new_weight * numerator/denominator;
         }
-
-        //cout << new_weight << endl;
         weights[i] = new_weight;
         particles[i].weight = new_weight;
 
     }
-
-	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
-	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
-	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
-	//   according to the MAP'S coordinate system. You will need to transform between the two systems.
-	//   Keep in mind that this transformation requires both rotation AND translation (but no scaling).
-	//   The following is a good resource for the theory:
-	//   https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
-	//   and the following is a good resource for the actual equation to implement (look at equation 
-	//   3.33. Note that you'll need to switch the minus sign in that equation to a plus to account 
-	//   for the fact that the map's y-axis actually points downwards.)
-	//   http://planning.cs.uiuc.edu/node99.html
+	//  https://en.wikipedia.org/wiki/Multivariate_normal_distribution
+	//  https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
+	//  http://planning.cs.uiuc.edu/node99.html
 }
 
 void ParticleFilter::resample() {
+    //Resample current particles based on their weights
     std::vector<Particle> resampled_particles;
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    random_device rd;
+    default_random_engine gen(rd());
 
     for(int counter=0; counter<particles.size(); counter++){
-        discrete_distribution<> index(weights.begin(), weights.end());
+        discrete_distribution<int> index(weights.begin(), weights.end());
         resampled_particles.push_back(particles[index(gen)]);
     }
 
     particles = resampled_particles;
-	// TODO: Resample particles with replacement with probability proportional to their weight. 
-	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
 
 }
